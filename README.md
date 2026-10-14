@@ -21,15 +21,27 @@ Para adicionar um texto, inclua a chave nos três dicionários e consuma o conte
 
 As páginas carregam apenas o dicionário da rota no servidor. O seletor PT | EN | ES usa navegação interna do Next.js e preserva a seção atual. Os IDs das seções não mudam de idioma.
 
-O assistant guarda apenas IDs de etapa, serviço, faixa e dúvida em memória e `sessionStorage`. A interface, histórico, resumo e mensagem comercial são reconstruídos no idioma ativo. As respostas persistem durante a troca de idioma e recarregamentos na mesma sessão; o painel pode fechar na navegação e permanece acessível pelo botão flutuante. Sem acesso ao storage, a memória preserva escolhas durante navegação interna.
+O assistant guarda IDs estáveis de diagnóstico, serviço, objetivo, etapa e escolhas, além dos textos livres do briefing informados pelo visitante, em memória e `sessionStorage`. A interface, histórico, resumo e mensagem comercial são reconstruídos no idioma ativo. As respostas persistem durante a troca de idioma e recarregamentos na mesma sessão; o painel pode fechar na navegação e permanece acessível pelo botão flutuante. Sem acesso ao storage, a memória preserva escolhas durante navegação interna.
+
+## NextWave Assistant v2.2
+
+O painel é carregado sob demanda e não abre automaticamente. O visitante pode pedir ajuda para escolher, selecionar qualquer um dos quatro serviços, melhorar um site atual, consultar a central de dúvidas ou abrir o WhatsApp imediatamente.
+
+O diagnóstico faz de uma a três perguntas, conforme o caminho escolhido. `recommendService` usa regras determinísticas: oferta e campanha indicam landing page; apresentação da empresa indica site institucional; melhorias de visual e estrutura indicam redesign; atualizações e correções indicam manutenção. Respostas insuficientes ou conflitantes geram uma pergunta de esclarecimento ou alternativas. A confiança é qualitativa, sem porcentagens ou promessas. O visitante pode escolher outro serviço.
+
+O briefing faz uma pergunta por vez, com até sete interações opcionais. Reutiliza o objetivo do diagnóstico e adapta os detalhes ao serviço escolhido. Há seleção múltipla, campos livres com limite, validação de URL, opção de pular, finalização antecipada, edição do resumo e retomada. Nenhuma informação pessoal é solicitada. As respostas sobre prazo, mobile, materiais, domínio, hospedagem e orçamento reutilizam o FAQ real do site.
+
+A sessão usa a chave `nextwave.assistant.v2.2`; escolhas de serviço da versão anterior são migradas. Os dados ficam somente no navegador durante a sessão. Reiniciar limpa o fluxo. Se o armazenamento estiver bloqueado, a memória ainda preserva o briefing na navegação interna.
+
+Os textos do assistant ficam em `src/i18n/chat/{pt-BR,en,es}.ts`, com contrato explícito em `types.ts`. As fábricas recebem o conteúdo público do idioma para reutilizar o FAQ. Não há tradução automática, backend ou API de IA.
 
 ## WhatsApp e publicação
 
 Todos os links são gerados por `src/lib/whatsapp.ts`, usando o número oficial `5544997341655` (+55 44 99734-1655) e `encodeURIComponent`.
 Cada CTA recebe uma mensagem traduzida; os cards especificam o serviço.
-O assistant acrescenta origem NextWave Assistant, serviço, faixa apenas quando informada, dúvida quando selecionada e pedido de orçamento. O link abre o WhatsApp preenchido; o visitante confirma o envio no aplicativo.
+O assistant compõe frases naturais a partir do serviço e das respostas efetivamente informadas. Campos vazios e escolhas sem informação útil são omitidos. O resumo mostra uma prévia editável; edições da mensagem são preservadas por idioma e invalidadas quando o briefing muda. Textos livres do briefing permanecem como foram escritos. O link abre o WhatsApp preenchido; o visitante confirma o envio no aplicativo.
 
-Não há preços de serviços na landing page. A faixa opcional do assistant permanece em reais brasileiros (BRL), sem conversão de moeda.
+Não há preços de serviços na landing page nem pergunta de investimento no fluxo do assistant.
 
 Configure o domínio real em um arquivo `.env.local` (ignorado pelo Git):
 
@@ -50,7 +62,13 @@ Sem configuração válida, nenhuma URL de produção é inventada e o sitemap f
 - `src/components/`: seções e seletor de idioma.
 - `src/components/ui/`: marca, CTAs, menu móvel e animações.
 - `src/components/chat/`: botão flutuante, painel, mensagens e opções.
-- `src/lib/chat.ts`: fluxo guiado e composição das mensagens traduzidas.
+- `src/lib/chat.ts`: estado previsível, navegação e ações do fluxo.
+- `src/lib/service-recommendation.ts`: regras puras de recomendação.
+- `src/lib/project-briefing.ts`: sequência adaptativa e validação dos campos.
+- `src/lib/whatsapp-message-builder.ts`: composição natural das mensagens.
+- `src/lib/chat-session.ts`: validação e migração da sessão.
+- `src/i18n/chat/`: traduções tipadas do assistant.
+- `tests/assistant.test.ts`: testes automatizados de recomendação, fluxo, sessão, tradução e mensagens.
 - `src/lib/chat-store.ts`: preservação das respostas na sessão.
 - `src/lib/whatsapp.ts`: contato oficial e URLs comerciais.
 - `AGENTS.md`: convenções do projeto e instruções locais do Next.js.
@@ -63,11 +81,14 @@ O conteúdo é renderizado no servidor. FAQ e menu usam controles nativos. Smoot
 
 ```bash
 npm run lint
+npm test
 npx next typegen
 npx tsc --noEmit
 npm run build
 npm start
 ```
+
+`npm test` compila os testes para a pasta ignorada `.next/assistant-tests` e usa `node:test`, disponível no Node 20+. Reutiliza TypeScript e o runner nativo do Node, sem dependências novas.
 
 `next typegen` atualiza os tipos após mudanças de rotas. Em PowerShell com scripts bloqueados, use `npm.cmd` e `npx.cmd`.
 O build pode baixar Geist via `next/font/google` e precisar de rede na primeira execução; a fonte é servida pelo próprio site em produção.

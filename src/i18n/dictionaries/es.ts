@@ -1,3 +1,4 @@
+import { createChatContent } from "../chat/es";
 import type { Dictionary } from "../types";
 
 const content = {
@@ -250,115 +251,7 @@ const content = {
   }
 } as const;
 
-const chat = {
-  "panelId": "nextwave-chat-panel",
-  "title": "NextWave Assistant",
-  "subtitle": "Asistente virtual de presupuestos",
-  "greeting": "¡Hola!  Bienvenido a NextWave. ¿Cómo podemos ayudarte con tu proyecto?",
-  "budgetQuestion": "¿Ya tienes un rango de inversión en mente?",
-  "budgetNote": "Los importes están en reales brasileños (BRL). Esta información es opcional y no representa el precio de nuestros servicios. También puedes contactarnos directamente por WhatsApp.",
-  "questionsPrompt": "¿Qué duda te gustaría resolver?",
-  "summaryPrompt": "Este es el resumen de tu proyecto. Podemos continuar la conversación por WhatsApp.",
-  "directPrompt": "Conversemos sobre tu proyecto. Usa el botón de abajo para contactar directamente con NextWave por WhatsApp.",
-  "contactPending": "Contacto por WhatsApp pendiente: aún no se ha configurado un número comercial válido.",
-  "labels": {
-    "open": "Abrir el asistente comercial de NextWave",
-    "close": "Cerrar el asistente comercial de NextWave",
-    "loading": "Abriendo asistente…",
-    "back": "Volver un paso",
-    "restart": "Reiniciar conversación",
-    "whatsapp": "Conversar por WhatsApp",
-    "messages": "Conversación con NextWave Assistant",
-    "assistant": "NextWave Assistant",
-    "visitor": "Tú",
-    "service": "Servicio",
-    "budget": "Presupuesto estimado (BRL)",
-    "unspecifiedService": "Por definir",
-    "unspecifiedBudget": "No informado",
-    "origin": "Origen",
-    "question": "Pregunta",
-    "quoteRequest": "Me gustaría solicitar un presupuesto para mi proyecto."
-  },
-  "stageLabels": {
-    "welcome": "¿Cómo podemos ayudarte?",
-    "budget": "Rango de inversión (BRL, opcional)",
-    "summary": "Resumen del proyecto",
-    "questions": "Preguntas frecuentes",
-    "answer": "Continuar la conversación",
-    "direct": "Contacto directo"
-  },
-  "services": [
-    {
-      "id": "landing",
-      "label": "Quiero una landing page.",
-      "service": content.services.items[0].title
-    },
-    {
-      "id": "website",
-      "label": "Necesito un sitio institucional.",
-      "service": content.services.items[1].title
-    },
-    {
-      "id": "redesign",
-      "label": "Quiero modernizar mi sitio.",
-      "service": content.services.items[2].title
-    }
-  ],
-  "doubtsOption": {
-    "id": "questions",
-    "label": "Tengo algunas dudas."
-  },
-  "otherQuestionOption": {
-    "id": "questions",
-    "label": "Ver otras preguntas"
-  },
-  "budgets": [
-    {
-      "id": "up-to-1000",
-      "label": "Hasta R$ 1.000 (BRL)."
-    },
-    {
-      "id": "1000-to-2500",
-      "label": "De R$ 1.000 a R$ 2.500 (BRL)."
-    },
-    {
-      "id": "above-2500",
-      "label": "Más de R$ 2.500 (BRL)."
-    },
-    {
-      "id": "unknown",
-      "label": "Todavía no lo sé."
-    }
-  ],
-  "questions": [
-    {
-      "id": "timeline",
-      "label": "¿Cuánto se tarda en crear un sitio web?",
-      "answer": content.faq.items[1].answer
-    },
-    {
-      "id": "mobile",
-      "label": "¿El sitio funciona en el celular?",
-      "answer": content.faq.items[2].answer
-    },
-    {
-      "id": "domain",
-      "label": "¿Necesito tener un dominio?",
-      "answer": content.faq.items[4].answer
-    },
-    {
-      "id": "payment",
-      "label": "¿Cómo funciona el pago?",
-      "answer": "Para conocer las condiciones de pago, contáctanos por WhatsApp antes de contratar."
-    },
-    {
-      "id": "direct",
-      "label": "Quiero hablar directamente con ustedes.",
-      "answer": ""
-    }
-  ],
-  "whatsappIntro": "¡Hola! Conocí NextWave a través del asistente de su sitio web."
-} as const;
+const chat = createChatContent(content);
 
 const dictionary = { site: content, chat } satisfies Dictionary;
 export default dictionary;

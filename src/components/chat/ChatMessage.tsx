@@ -1,5 +1,5 @@
 import type { ChatContent } from "@/i18n/types";
-import type { ChatEntry } from "@/lib/chat";
+import type { ChatEntry } from "@/lib/chat-content";
 
 export function ChatMessage({ speaker, text, labels }: Pick<ChatEntry, "speaker" | "text"> & { labels: ChatContent["labels"] }) {
   return (

@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "incremental": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2022",
+    "outDir": "../.next/assistant-tests",
+    "rootDir": "..",
+    "plugins": []
+  },
+  "include": ["./*.test.ts"],
+  "exclude": ["../node_modules", "../.next"]
+}

@@ -1,80 +1,111 @@
-import type { ChatContent } from "@/i18n/types";
-import { type ChatBudgetId, type ChatQuestionId, type ChatServiceId } from "@/config/chat";
+import type { Locale } from "../i18n/config";
+import { type BriefingField, type DiagnosticAnswers, type FAQId, type ProjectBriefing, type ServiceId } from "../config/chat";
+import { createBriefing, nextBriefingField, validateBriefingText } from "./project-briefing";
+import { diagnosticClarification, recommendService, type Clarification } from "./service-recommendation";
 
-export type ChatState = {
-  step: "welcome" | "budget" | "summary" | "questions" | "answer" | "direct";
-  serviceId?: ChatServiceId;
-  budgetId?: ChatBudgetId;
-  questionId?: ChatQuestionId;
+export type View = "welcome" | "services" | "diagnosis" | "recommendation" | "briefing" | "summary" | "edit" | "questions" | "answer";
+export type Frame = { view: View; field?: BriefingField; diagnosticField?: "situation" | "goal" | "clarification"; questionId?: FAQId; editing?: boolean };
+export type ChatState = Frame & {
+  diagnosis: DiagnosticAnswers;
+  briefing: ProjectBriefing;
+  entry?: "diagnose" | "choose" | "improve" | "questions";
+  source?: "recommended" | "manual";
+  history: Frame[];
+  messageEdits: Partial<Record<Locale, { base: string; text: string }>>;
 };
-
 export type ChatAction =
-  | { type: "service"; id: ChatServiceId }
-  | { type: "budget"; id: ChatBudgetId }
-  | { type: "question"; id: ChatQuestionId }
-  | { type: "questions" | "direct" | "back" | "restart" };
+  | { type: "start"; entry: NonNullable<ChatState["entry"]> }
+  | { type: "situation"; value: NonNullable<DiagnosticAnswers["situation"]> }
+  | { type: "diagnostic-goal"; value: NonNullable<DiagnosticAnswers["goal"]> }
+  | { type: "clarify"; field: Clarification; value: string }
+  | { type: "service"; service: ServiceId; source: "manual" | "recommended" }
+  | { type: "answer"; field: BriefingField; value: string | readonly string[] }
+  | { type: "draft"; field: BriefingField; value: string | readonly string[] }
+  | { type: "edit"; field: BriefingField | "service" }
+  | { type: "question"; id: FAQId }
+  | { type: "message"; locale: Locale; base: string; text: string }
+  | { type: "back" | "restart" | "services" | "questions" | "finish" | "resume" | "edit-menu" };
 
-export const initialChatState: ChatState = { step: "welcome" };
+export const initialChatState: ChatState = { view: "welcome", diagnosis: {}, briefing: createBriefing(), history: [], messageEdits: {} };
+function frame(state: ChatState): Frame {
+  return { view: state.view, field: state.field, diagnosticField: state.diagnosticField, questionId: state.questionId, editing: state.editing };
+}
+function navigate(state: ChatState, target: Frame): ChatState {
+  return { ...state, field: undefined, diagnosticField: undefined, questionId: undefined, editing: undefined,
+    ...target, history: [...state.history.slice(-19), frame(state)] };
+}
+function chooseService(state: ChatState, service: ServiceId, source: ChatState["source"]): ChatState {
+  const same = state.briefing.service === service;
+  const briefing: ProjectBriefing = { ...state.briefing, service,
+    ...(!same ? { offer: undefined, action: undefined, currentUrl: undefined, pages: [], improvements: [], maintenance: [],
+      completed: state.briefing.completed.filter(field => ["business", "goal", "materials", "timing", "details"].includes(field)) } : {}),
+  };
+  const field = nextBriefingField(briefing);
+  return navigate({ ...state, briefing, source, messageEdits: {} }, state.editing || !field
+    ? { view: "summary" } : { view: "briefing", field });
+}
 
 export function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
-    case "service": return { step: "budget", serviceId: action.id };
-    case "budget": return state.step === "budget" && state.serviceId
-      ? { ...state, step: "summary", budgetId: action.id } : state;
-    case "questions": return { step: "questions" };
-    case "question": return state.step === "questions" ? { step: "answer", questionId: action.id } : state;
-    case "direct": return { step: "direct" };
-    case "restart": return initialChatState;
-    case "back":
-      if (state.step === "summary") return { step: "budget", serviceId: state.serviceId };
-      if (state.step === "answer" || state.step === "direct") return { step: "questions" };
-      return initialChatState;
+    case "restart": return { ...initialChatState, briefing: createBriefing() };
+    case "back": {
+      const previous = state.history.at(-1);
+      return previous ? { ...state, field: undefined, diagnosticField: undefined, questionId: undefined, editing: undefined,
+        ...previous, history: state.history.slice(0, -1) } : initialChatState;
+    }
+    case "start": {
+      const updated = { ...state, entry: action.entry, diagnosis: action.entry === "improve" ? { situation: "existing" as const } : {} };
+      if (action.entry === "choose") return navigate(updated, { view: "services" });
+      if (action.entry === "questions") return navigate(updated, { view: "questions" });
+      return navigate(updated, { view: "diagnosis", diagnosticField: action.entry === "improve" ? "clarification" : "situation" });
+    }
+    case "situation": return navigate({ ...state, diagnosis: { situation: action.value } }, { view: "diagnosis", diagnosticField: "goal" });
+    case "diagnostic-goal": {
+      const diagnosis = { situation: state.diagnosis.situation, goal: action.value };
+      const briefing = { ...state.briefing, goal: action.value, completed: state.briefing.completed.filter(field => field !== "goal") };
+      return navigate({ ...state, diagnosis, briefing, messageEdits: {} }, diagnosticClarification(diagnosis)
+        ? { view: "diagnosis", diagnosticField: "clarification" } : { view: "recommendation" });
+    }
+    case "clarify": {
+      const diagnosis: DiagnosticAnswers = { ...state.diagnosis, [action.field]: action.value };
+      if (action.field === "change" && action.value !== "unsure") {
+        diagnosis.goal = action.value === "support" ? "keep-updated" : "improve-design";
+      }
+      const briefing = action.field === "change" && action.value !== "unsure"
+        ? { ...state.briefing, goal: diagnosis.goal } : state.briefing;
+      return navigate({ ...state, diagnosis, briefing, messageEdits: {} }, { view: "recommendation" });
+    }
+    case "service": return chooseService(state, action.service, action.source);
+    case "services": return navigate(state, { view: "services" });
+    case "questions": return navigate(state, { view: "questions" });
+    case "question": return navigate(state, { view: "answer", questionId: action.id });
+    case "finish": return navigate(state, { view: "summary" });
+    case "edit-menu": return navigate(state, { view: "edit" });
+    case "edit": return navigate(state, action.field === "service" ? { view: "services", editing: true }
+      : { view: "briefing", field: action.field, editing: true });
+    case "resume": {
+      const field = nextBriefingField(state.briefing);
+      return field ? navigate(state, { view: "briefing", field }) : state;
+    }
+    case "draft": {
+      if (state.view !== "briefing" || state.field !== action.field) return state;
+      const value = typeof action.value === "string" ? action.value : [...action.value];
+      return { ...state, briefing: { ...state.briefing, [action.field]: value }, messageEdits: {} };
+    }
+    case "answer": {
+      if (state.view !== "briefing" || state.field !== action.field) return state;
+      if (typeof action.value === "string" && action.field in textLimitsForAnswer
+        && validateBriefingText(action.field as keyof typeof textLimitsForAnswer, action.value)) return state;
+      const value = typeof action.value === "string" ? action.value.trim() || undefined : [...action.value];
+      const briefing = { ...state.briefing, [action.field]: value,
+        completed: [...new Set([...state.briefing.completed, action.field])] };
+      const field = nextBriefingField(briefing);
+      return navigate({ ...state, briefing, messageEdits: {} }, !state.editing && field
+        ? { view: "briefing", field } : { view: "summary" });
+    }
+    case "message": return { ...state, messageEdits: { ...state.messageEdits,
+      [action.locale]: { base: action.base, text: action.text.slice(0, 2000) } } };
   }
 }
-
-export function getChatSelection(state: ChatState, chatConfig: ChatContent) {
-  return {
-    service: chatConfig.services.find(item => item.id === state.serviceId),
-    budget: chatConfig.budgets.find(item => item.id === state.budgetId),
-    question: chatConfig.questions.find(item => item.id === state.questionId),
-  };
-}
-
-/** A codificação e o número continuam sob responsabilidade de src/lib/whatsapp.ts. */
-export function getAssistantMessage(state: ChatState, chatConfig: ChatContent): string {
-  const { service, budget, question } = getChatSelection(state, chatConfig);
-  const labels = chatConfig.labels;
-  return [
-    chatConfig.whatsappIntro,
-    `${labels.origin}: ${chatConfig.title}`,
-    `${labels.service}: ${service?.service ?? labels.unspecifiedService}`,
-    ...(budget ? [`${labels.budget}: ${budget.label}`] : []),
-    ...(question ? [`${labels.question}: ${question.label}`] : []),
-    labels.quoteRequest,
-  ].join("\n");
-}
-
-export type ChatEntry = { id: string; speaker: "assistant" | "visitor"; text: string };
-
-export function getChatMessages(state: ChatState, chatConfig: ChatContent): ChatEntry[] {
-  const messages: ChatEntry[] = [{ id: "greeting", speaker: "assistant", text: chatConfig.greeting }];
-  const { service, budget, question } = getChatSelection(state, chatConfig);
-  if (service) {
-    messages.push({ id: "service", speaker: "visitor", text: service.label });
-    messages.push({ id: "budget-question", speaker: "assistant", text: chatConfig.budgetQuestion });
-    if (budget) messages.push({ id: "budget", speaker: "visitor", text: budget.label });
-    if (state.step === "summary") messages.push({ id: "summary", speaker: "assistant", text: chatConfig.summaryPrompt });
-  } else if (state.step !== "welcome") {
-    messages.push({ id: "doubts", speaker: "visitor", text: chatConfig.doubtsOption.label });
-    messages.push({ id: "questions-prompt", speaker: "assistant", text: chatConfig.questionsPrompt });
-    if (question) {
-      messages.push({ id: `question-${question.id}`, speaker: "visitor", text: question.label });
-      messages.push({ id: `answer-${question.id}`, speaker: "assistant", text: question.answer });
-    }
-    if (state.step === "direct") {
-      messages.push({ id: "direct-choice", speaker: "visitor", text: chatConfig.questions[4].label });
-      messages.push({ id: "direct", speaker: "assistant", text: chatConfig.directPrompt });
-    }
-  }
-  return messages;
-}
+const textLimitsForAnswer = { business: true, offer: true, currentUrl: true, details: true } as const;
+export { recommendService };

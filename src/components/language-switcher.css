@@ -16,7 +16,7 @@
   padding: 5px;
   border-radius: 6px;
   color: #94a3b8;
-  font-size: 11px;
+  font-size: var(--text-sm);
   font-weight: 600;
   letter-spacing: .06em;
   transition: color 180ms, background-color 180ms;
@@ -28,11 +28,11 @@
 .nw-language-desktop { display: none; }
 .mobile-menu-panel > .nw-language-switcher { margin-top: 16px; }
 .mobile-menu-panel nav.nw-language-switcher { flex-direction: row; gap: 2px; }
-.mobile-menu-panel nav.nw-language-switcher > a { padding: 5px; font-size: 11px; min-width: 44px; min-height: 44px; }
+.mobile-menu-panel nav.nw-language-switcher > a { padding: 5px; font-size: var(--text-sm); min-width: 44px; min-height: 44px; }
 @media (hover: hover) and (pointer: fine) {
   .nw-language-switcher a:hover { color: #e2e8f0; background: rgb(56 189 248 / 8%); }
 }
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .nw-language-desktop { display: block; }
   .navbar-inner { gap: 16px; }
 }

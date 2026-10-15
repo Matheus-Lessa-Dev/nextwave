@@ -32,11 +32,6 @@ export function Hero({ site }: { site: SiteContent }) {
               <span key={index} style={{ "--i": index } as CSSProperties} />
             ))}
           </div>
-          <span className="art-spark art-spark-one" data-ambient-depth="1">+</span>
-          <span className="art-spark art-spark-two" data-ambient-depth="-0.6">+</span>
-          <div className="art-label">
-            <Sparkles size={16} />{content.visualLabel}<ArrowDownRight size={16} />
-          </div>
         </div>
       </div>
       <div className="container">

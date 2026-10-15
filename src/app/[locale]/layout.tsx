@@ -1,6 +1,8 @@
 import type { Viewport } from "next";
 import { Geist } from "next/font/google";
 import type { ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { site } from "@/config/site";
 import { locales, isLocale, defaultLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
@@ -28,7 +30,11 @@ export default async function RootLayout({ children, params }: Props) {
   const locale = isLocale(requested) ? requested : defaultLocale;
   return (
     <html lang={locale} className={`${geistSans.variable} antialiased`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics />
+        <SpeedInsights />
+      </body>
     </html>
   );
 }

@@ -77,6 +77,17 @@ Orbit Studio, Botânica e Nexus Workspace são demos visuais autorais, identific
 
 O conteúdo é renderizado no servidor. FAQ e menu usam controles nativos. Smooth scrolling, reveal, hover, iluminação e parallax preservam movimento reduzido e a experiência mobile.
 
+## Analytics e desempenho
+
+O layout compartilhado em `src/app/[locale]/layout.tsx` inclui `Analytics` e `SpeedInsights`, usando as integrações oficiais da Vercel para Next.js nos três idiomas.
+
+- **Web Analytics**: visitantes, visualizações, origem dos acessos, países e dispositivos.
+- **Speed Insights**: métricas de desempenho da experiência dos visitantes, conforme os recursos disponíveis no plano.
+
+No painel do projeto na Vercel, habilite **Analytics** e **Speed Insights**, publique um novo deploy e visite o site para iniciar a coleta. Consulte os resultados nas respectivas abas. Bloqueadores de conteúdo podem impedir o envio dos eventos. A integração não exige banco de dados próprio nem chaves de API no projeto.
+
+Guias oficiais: [Web Analytics](https://vercel.com/docs/analytics/quickstart) e [Speed Insights](https://vercel.com/docs/speed-insights/quickstart).
+
 ## Validação e produção
 
 ```bash
